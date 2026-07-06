@@ -1,4 +1,4 @@
-import streamlit as st
+    import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -7,9 +7,9 @@ import time
 # Page config and Title
 st.set_page_config(page_title="Stock Boost - Institutional Scanner", layout="wide")
 st.title("🚀 STOCK BOOST – Advanced Institutional Flow & Volume Scanner")
-st.write("Live Market Smooth Structure & Volume Analytics (All 200+ F&O Stocks Active)")
+st.write("Live Market Smooth Structure & Volume Analytics (3-Minute Auto-Refresh Sequence)")
 
-# COMPLETE 200+ F&O WATCHLIST (NO FILTERS BEFORE SCAN)
+# 200+ FULL METRIC WATCHLIST
 WATCHLIST = [
     "RELIANCE.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "HDFCBANK.NS", "BHARTIARTL.NS",
     "SBIN.NS", "LTIM.NS", "LT.NS", "ITC.NS", "AXISBANK.NS", "KOTAKBANK.NS", "HINDUNILVR.NS",
@@ -46,15 +46,24 @@ WATCHLIST = [
     "GICRE.NS", "NIACL.NS", "LIC.NS", "HINDZINC.NS"
 ]
 
+# FULL COMPREHENSIVE SECTOR MAPPING (FIXES "OTHER")
 SECTOR_MAP = {
-    "RELIANCE.NS": "Energy", "ONGC.NS": "Energy", "BPCL.NS": "Energy", "IOC.NS": "Energy", "POWERGRID.NS": "Utilities", "NTPC.NS": "Utilities",
-    "TCS.NS": "IT", "INFY.NS": "IT", "WIPRO.NS": "IT", "TECHM.NS": "IT", "HCLTECH.NS": "IT", "LTIM.NS": "IT", "COFORGE.NS": "IT", "PERSISTENT.NS": "IT",
-    "HDFCBANK.NS": "Banking", "ICICIBANK.NS": "Banking", "AXISBANK.NS": "Banking", "KOTAKBANK.NS": "Banking", "SBIN.NS": "Banking", "INDUSINDBK.NS": "Banking", "PNB.NS": "Banking", "BANKBARODA.NS": "Banking",
-    "BAJFINANCE.NS": "Financial Services", "BAJAJFINSV.NS": "Financial Services", "CHOLAFIN.NS": "Financial Services", "SHRIRAMFIN.NS": "Financial Services", "PFC.NS": "Financial Services", "RECLTD.NS": "Financial Services",
-    "MARUTI.NS": "Auto", "TATAMOTORS.NS": "Auto", "M&M.NS": "Auto", "EICHERMOT.NS": "Auto", "HEROMOTOCO.NS": "Auto", "BAJAJ-AUTO.NS": "Auto", "TVSMOTOR.NS": "Auto",
-    "TATASTEEL.NS": "Metals", "HINDALCO.NS": "Metals", "JSWSTEEL.NS": "Metals", "SAIL.NS": "Metals", "NMDC.NS": "Metals", "JINDALSTEL.NS": "Metals",
-    "SUNPHARMA.NS": "Pharma", "CIPLA.NS": "Pharma", "DRREDDY.NS": "Pharma", "DIVISLAB.NS": "Pharma", "APOLLOHOSP.NS": "Pharma", "ZYDUSLIFE.NS": "Pharma",
-    "ITC.NS": "FMCG", "HINDUNILVR.NS": "FMCG", "BRITANNIA.NS": "FMCG", "NESTLEIND.NS": "FMCG", "VBL.NS": "FMCG", "COLPAL.NS": "FMCG", "DABUR.NS": "FMCG"
+    "RELIANCE.NS": "Energy", "ONGC.NS": "Energy", "BPCL.NS": "Energy", "IOC.NS": "Energy", "HPCL.NS": "Energy", "HINDPETRO.NS": "Energy", "OIL.NS": "Energy", "MRPL.NS": "Energy",
+    "POWERGRID.NS": "Utilities", "NTPC.NS": "Utilities", "JSWENERGY.NS": "Utilities", "TATAPOWER.NS": "Utilities", "SJVN.NS": "Utilities", "NHPC.NS": "Utilities", "SUZLON.NS": "Utilities", "GAIL.NS": "Utilities", "IGL.NS": "Utilities", "MGL.NS": "Utilities", "GUJGASLTD.NS": "Utilities", "TORNTPOWER.NS": "Utilities",
+    "TCS.NS": "IT", "INFY.NS": "IT", "WIPRO.NS": "IT", "TECHM.NS": "IT", "HCLTECH.NS": "IT", "LTIM.NS": "IT", "COFORGE.NS": "IT", "PERSISTENT.NS": "IT", "MPHASIS.NS": "IT", "BSOFT.NS": "IT", "OFSS.NS": "IT", "CYIENT.NS": "IT",
+    "HDFCBANK.NS": "Banking", "ICICIBANK.NS": "Banking", "AXISBANK.NS": "Banking", "KOTAKBANK.NS": "Banking", "SBIN.NS": "Banking", "INDUSINDBK.NS": "Banking", "PNB.NS": "Banking", "BANKBARODA.NS": "Banking", "FEDERALBNK.NS": "Banking", "BANDHANBNK.NS": "Banking", "RBLBANK.NS": "Banking", "IDFCFIRSTB.NS": "Banking", "AUBANK.NS": "Banking", "BANKINDIA.NS": "Banking", "MAHABANK.NS": "Banking", "CENTRALBK.NS": "Banking", "IOB.NS": "Banking", "IDBI.NS": "Banking", "UCOBANK.NS": "Banking", "UNIONBANK.NS": "Banking",
+    "BAJFINANCE.NS": "Financial Services", "BAJAJFINSV.NS": "Financial Services", "CHOLAFIN.NS": "Financial Services", "SHRIRAMFIN.NS": "Financial Services", "PFC.NS": "Financial Services", "RECLTD.NS": "Financial Services", "MUTHOOTFIN.NS": "Financial Services", "MANAPPURAM.NS": "Financial Services", "LICHSGFIN.NS": "Financial Services", "ABCAPITAL.NS": "Financial Services", "PEL.NS": "Financial Services", "SBILIFE.NS": "Financial Services", "HDFCLIFE.NS": "Financial Services", "LIC.NS": "Financial Services", "GICRE.NS": "Financial Services", "NIACL.NS": "Financial Services", "IREDA.NS": "Financial Services", "HUDCO.NS": "Financial Services", "IDFC.NS": "Financial Services",
+    "MARUTI.NS": "Auto", "TATAMOTORS.NS": "Auto", "M&M.NS": "Auto", "EICHERMOT.NS": "Auto", "HEROMOTOCO.NS": "Auto", "BAJAJ-AUTO.NS": "Auto", "TVSMOTOR.NS": "Auto", "ASHOKLEY.NS": "Auto", "BHARATFORG.NS": "Auto", "BALKRISIND.NS": "Auto", "APOLLOTYRE.NS": "Auto", "EXIDEIND.NS": "Auto", "MOTHERSON.NS": "Auto", "BOSCHLTD.NS": "Auto",
+    "TATASTEEL.NS": "Metals", "HINDALCO.NS": "Metals", "JSWSTEEL.NS": "Metals", "SAIL.NS": "Metals", "NMDC.NS": "Metals", "JINDALSTEL.NS": "Metals", "NATIONALUM.NS": "Metals", "HINDCOPPER.NS": "Metals", "HINDZINC.NS": "Metals",
+    "SUNPHARMA.NS": "Pharma", "CIPLA.NS": "Pharma", "DRREDDY.NS": "Pharma", "DIVISLAB.NS": "Pharma", "APOLLOHOSP.NS": "Pharma", "ZYDUSLIFE.NS": "Pharma", "LUPIN.NS": "Pharma", "AUROPHARMA.NS": "Pharma", "ALKEM.NS": "Pharma", "BIOCON.NS": "Pharma", "FORTIS.NS": "Pharma", "GLENMARK.NS": "Pharma", "IPCALAB.NS": "Pharma", "GRANULES.NS": "Pharma", "SYNGENE.NS": "Pharma", "ABBOTINDIA.NS": "Pharma",
+    "ITC.NS": "FMCG", "HINDUNILVR.NS": "FMCG", "BRITANNIA.NS": "FMCG", "NESTLEIND.NS": "FMCG", "VBL.NS": "FMCG", "COLPAL.NS": "FMCG", "DABUR.NS": "FMCG", "TATACONSUM.NS": "FMCG", "MCDOWELL-N.NS": "FMCG", "UBL.NS": "FMCG", "PGHH.NS": "FMCG", "BALRAMCHIN.NS": "FMCG",
+    "DLF.NS": "Real Estate", "GODREJPROP.NS": "Real Estate", "OBEROIRLTY.NS": "Real Estate",
+    "LT.NS": "Capital Goods", "BEL.NS": "Capital Goods", "HAL.NS": "Capital Goods", "BHEL.NS": "Capital Goods", "ABB.NS": "Capital Goods", "SIEMENS.NS": "Capital Goods", "VOLTAS.NS": "Capital Goods", "CUMMINSIND.NS": "Capital Goods",
+    "DIXON.NS": "Consumer Durables", "POLYCAB.NS": "Consumer Durables", "KEI.NS": "Consumer Durables", "HAVELLS.NS": "Consumer Durables", "TITAN.NS": "Consumer Durables", "ASTRAL.NS": "Consumer Durables", "KALYANKJIL.NS": "Consumer Durables", "CROMPTON.NS": "Consumer Durables", "BATAINDIA.NS": "Consumer Durables",
+    "GRASIM.NS": "Materials", "ULTRACEMCO.NS": "Materials", "AMBUJACEM.NS": "Materials", "ACC.NS": "Materials", "PIDILITIND.NS": "Materials", "BERGEPAINT.NS": "Materials", "ASIANPAINT.NS": "Materials", "SHREECEM.NS": "Materials", "JKCEMENT.NS": "Materials", "RAMCOCEM.NS": "Materials", "DEEPAKNTR.NS": "Materials", "AARTIIND.NS": "Materials", "ATUL.NS": "Materials", "SRF.NS": "Materials", "NAVINFLUOR.NS": "Materials", "CHAMBLFERT.NS": "Materials", "GNFC.NS": "Materials", "SUPREMEIND.NS": "Materials", "TATACHEM.NS": "Materials",
+    "BHARTIARTL.NS": "Telecom", "INDUSTOWER.NS": "Telecom", "TATACOMM.NS": "Telecom",
+    "ADANIENT.NS": "Conglomerates", "JIOFIN.NS": "Financial Services",
+    "ADANIPORTS.NS": "Services", "CONCOR.NS": "Services", "DELHIVERY.NS": "Services", "INDIGO.NS": "Services", "IRCTC.NS": "Services", "RVNL.NS": "Services", "ZOMATO.NS": "Services", "JUBLFOOD.NS": "Services", "PVRINOX.NS": "Services", "SUNTV.NS": "Services", "ZEEL.NS": "Services", "NAUKRI.NS": "Services", "TRENT.NS": "Services", "IRB.NS": "Services", "TRIDENT.NS": "Services"
 }
 
 def analyze_market_batch():
@@ -64,7 +73,6 @@ def analyze_market_batch():
     sector_performance = {}
 
     try:
-        # High Speed Batch Fetching
         data_intraday = yf.download(WATCHLIST, period="2d", interval="15m", group_by='ticker', progress=False)
         data_daily = yf.download(WATCHLIST, period="6d", interval="1d", group_by='ticker', progress=False)
         
@@ -76,7 +84,7 @@ def analyze_market_batch():
                 t_daily = data_daily[ticker].dropna()
                 t_intra = data_intraday[ticker].dropna()
 
-                if len(t_daily) < 2 or len(t_intra) < 3:
+                if len(t_daily) < 2 or len(t_intra) < 6:
                     continue
 
                 prev_day_close = float(t_daily['Close'].iloc[-2])
@@ -84,8 +92,31 @@ def analyze_market_batch():
                 current_day_vol = float(t_daily['Volume'].iloc[-1])
                 vol_multiplier = current_day_vol / avg_hist_vol if avg_hist_vol > 0 else 1.0
 
-                latest_price = float(t_intra['Close'].iloc[-1])
+                prices = t_intra['Close'].values.flatten()
+                latest_price = float(prices[-1])
                 p_change = ((latest_price - prev_day_close) / prev_day_close) * 100
+
+                # --- 1. STRICT CANDLE UNIFORMITY FILTER (ANTI-SPIKE) ---
+                candle_bodies = np.abs(t_intra['Close'].values.flatten() - t_intra['Open'].values.flatten())
+                avg_body = np.mean(candle_bodies)
+                max_body = np.max(candle_bodies[-4:])
+                
+                if max_body > (avg_body * 3.0):
+                    continue
+
+                # --- 2. DYNAMIC SIDEWAYS SCANNER (2-5 CANDLES LIMIT) ---
+                recent_closes = prices[-8:]
+                is_stagnant = False
+                
+                for i in range(len(recent_closes) - 5):
+                    window = recent_closes[i:i+5]
+                    window_range = (np.max(window) - np.min(window)) / np.min(window) * 100
+                    if window_range < 0.12:
+                        is_stagnant = True
+                        break
+                
+                if is_stagnant:
+                    continue
 
                 # 50 EMA & RSI Calculations
                 t_intra['EMA_50'] = t_intra['Close'].ewm(span=50, adjust=False).mean()
@@ -97,42 +128,28 @@ def analyze_market_batch():
                 rs = gain / loss
                 rsi = 100 - (100 / (1 + rs.iloc[-1])) if not np.isnan(rs.iloc[-1]) else 50.0
 
-                # Morning Window Anomaly Filter (09:25 - 10:30) - Controlled Size Check
-                t_intra.index = pd.to_datetime(t_intra.index)
-                morning_df = t_intra.between_time('09:25', '10:30')
-                
-                is_slow_grind = True
-                if not morning_df.empty and len(morning_df) > 1:
-                    candle_sizes = (morning_df['High'] - morning_df['Low']).values.flatten()
-                    atr_morning = np.mean(candle_sizes)
-                    if np.any(candle_sizes > (atr_morning * 3.5)):
-                        is_slow_grind = False
+                sector = SECTOR_MAP.get(ticker, "Other Tickers Block")
+                stock_data = {
+                    "Stock Name": ticker.replace(".NS", ""),
+                    "Sector": sector,
+                    "Live Price": round(latest_price, 2),
+                    "Change %": round(p_change, 2),
+                    "RSI (14)": round(rsi, 2)
+                }
 
-                if is_slow_grind:
-                    sector = SECTOR_MAP.get(ticker, "Other")
-                    stock_data = {
-                        "Stock Name": ticker.replace(".NS", ""),
-                        "Sector": sector,
-                        "Live Price": round(latest_price, 2),
-                        "Change %": round(p_change, 2),
-                        "RSI (14)": round(rsi, 2)
-                    }
+                if latest_price > ema50:
+                    bullish_stocks.append(stock_data)
+                else:
+                    bearish_stocks.append(stock_data)
 
-                    # Trend Alignment (Above vs Below 50 EMA)
-                    if latest_price > ema50:
-                        bullish_stocks.append(stock_data)
-                    else:
-                        bearish_stocks.append(stock_data)
+                if vol_multiplier >= 1.5:
+                    vol_data = stock_data.copy()
+                    vol_data["Volume Multiplier"] = f"{round(vol_multiplier, 2)}x"
+                    volume_gainers.append(vol_data)
 
-                    # Volume Surge Accumulation Filter
-                    if vol_multiplier >= 1.5:
-                        vol_data = stock_data.copy()
-                        vol_data["Volume Multiplier"] = f"{round(vol_multiplier, 2)}x"
-                        volume_gainers.append(vol_data)
-
-                    if sector not in sector_performance:
-                        sector_performance[sector] = []
-                    sector_performance[sector].append(p_change)
+                if sector not in sector_performance:
+                    sector_performance[sector] = []
+                sector_performance[sector].append(p_change)
 
             except Exception:
                 continue
@@ -141,7 +158,7 @@ def analyze_market_batch():
 
     return bullish_stocks, bearish_stocks, volume_gainers, sector_performance
 
-# Fire Engine
+# Fire Engine Streams
 with st.spinner("Connecting to High-Speed Institutional 200+ Streams..."):
     bullish, bearish, vol_gainers, sectors = analyze_market_batch()
 
@@ -149,17 +166,17 @@ with st.spinner("Connecting to High-Speed Institutional 200+ Streams..."):
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("🟢 UP SIDE MOVES (Slow Accumulation - Above 50 EMA)")
+    st.subheader("🟢 UP SIDE MOVES (Smooth Dynamic Accumulation - Above 50 EMA)")
     if bullish:
         st.dataframe(pd.DataFrame(bullish).sort_values(by="Change %", ascending=False), use_container_width=True)
     else:
-        st.info("Scanning smooth institutional accumulation brackets...")
+        st.info("Scanning steady trending charts...")
 
-    st.subheader("🔴 DOWN SIDE MOVES (Slow Distribution - Below 50 EMA)")
+    st.subheader("🔴 DOWN SIDE MOVES (Smooth Dynamic Distribution - Below 50 EMA)")
     if bearish:
         st.dataframe(pd.DataFrame(bearish).sort_values(by="Change %", ascending=True), use_container_width=True)
     else:
-        st.info("Scanning smooth institutional distribution brackets...")
+        st.info("Scanning steady trending charts...")
 
     st.subheader("📊 VOLUME GAINERS (High Volume Activity >= 1.5x Multiplier)")
     if vol_gainers:
@@ -179,6 +196,7 @@ with col2:
     else:
         st.info("Awaiting structural data loops...")
 
-# Loop Sync
-time.sleep(15)
+# 3-Minute Refresh Sequence
+time.sleep(180)
 st.rerun()
+        
