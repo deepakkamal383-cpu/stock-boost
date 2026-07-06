@@ -6,8 +6,8 @@ import time
 
 # Page config and Title
 st.set_page_config(page_title="Stock Boost - Institutional Scanner", layout="wide")
-st.title("🚀 STOCK BOOST – One-Way Institutional Direction Scanner")
-st.write("Live 5-Minute Pure Grinding Trends (Strict 9/15 EMA Support & Micro Sideways Filter)")
+st.title("🚀 STOCK BOOST – Pure Price Action Trend Matrix")
+st.write("Live 5-Minute Pure Grinding Trends (Strict 2-Candle Breakout & 10-Day Volume Filter)")
 
 # 200+ COMPREHENSIVE WATCHLIST
 WATCHLIST = [
@@ -103,7 +103,7 @@ def analyze_market_batch():
 
     try:
         data_intraday = yf.download(WATCHLIST, period="1d", interval="5m", group_by='ticker', progress=False)
-        data_daily = yf.download(WATCHLIST, period="5d", interval="1d", group_by='ticker', progress=False)
+        data_daily = yf.download(WATCHLIST, period="11d", interval="1d", group_by='ticker', progress=False)
         
         for ticker in WATCHLIST:
             try:
@@ -113,90 +113,68 @@ def analyze_market_batch():
                 t_daily = data_daily[ticker].dropna()
                 t_intra = data_intraday[ticker].dropna()
 
-                if len(t_daily) < 2 or len(t_intra) < 15:
+                if len(t_daily) < 11 or len(t_intra) < 10:
                     continue
 
                 prev_day_close = float(t_daily['Close'].iloc[-2])
                 
-                # --- PRESENT TIME VOLUME ENGINE VS MULTI-DAY AVERAGE ---
-                avg_hist_vol = float(t_daily['Volume'].iloc[-4:].mean())
-                recent_intra_vol = float(t_intra['Volume'].iloc[-4:].mean()) * 75  # Normalized volume pulse
-                vol_multiplier = recent_intra_vol / avg_hist_vol if avg_hist_vol > 0 else 1.0
+                # --- 10-DAY COMPREHENSIVE HISTORICAL VOLUME ASSESSMENT ---
+                avg_10day_vol = float(t_daily['Volume'].iloc[-11:-1].mean())
+                current_live_vol = float(t_intra['Volume'].iloc[-6:].sum()) * 12 # Normalized pacing
+                vol_multiplier = current_live_vol / avg_10day_vol if avg_10day_vol > 0 else 1.0
 
                 prices = t_intra['Close'].values.flatten()
                 highs = t_intra['High'].values.flatten()
                 lows = t_intra['Low'].values.flatten()
+                opens = t_intra['Open'].values.flatten()
+                
                 latest_price = float(prices[-1])
                 p_change = ((latest_price - prev_day_close) / prev_day_close) * 100
 
-                # --- 1. STALWART CANDLE SIZE CONSTRAINT (SMALL CANDLES ONLY) ---
-                candle_bodies = np.abs(t_intra['Close'].values.flatten() - t_intra['Open'].values.flatten())
+                # --- STALWART CHOTI-CHOTI CANDLE CONSTRAINT ---
+                candle_bodies = np.abs(prices[-6:] - opens[-6:])
                 avg_body = np.mean(candle_bodies)
-                max_recent_body = np.max(candle_bodies[-3:])
-                if max_recent_body > (avg_body * 1.8):  # Rejects massive volatile spikes
+                if candle_bodies[-1] > (avg_body * 1.5): # No volatile spikes allowed
                     continue
 
-                # --- 2. ULTRA-STRICT PULLBACK ENGINE (MAX 0.18% REVERSION BOUNDARY) ---
-                if latest_price > prev_day_close:
-                    highest_peak = np.max(highs[-4:])
-                    pullback = ((highest_peak - latest_price) / highest_peak) * 100
-                    if pullback > 0.18:  # Instant termination for sudden deep drops
-                        continue
-                else:
-                    lowest_peak = np.min(lows[-4:])
-                    pullback = ((latest_price - lowest_peak) / lowest_peak) * 100
-                    if pullback > 0.18:
-                        continue
-
-                # --- 3. DYNAMIC SIDEWAYS DECAY FILTER (MAX 3-4 CANDLES CEILING) ---
-                # Rejects if more than 4 candles freeze in a dead tight corridor
-                recent_closes = prices[-8:]
-                is_extensively_sideways = False
-                for i in range(len(recent_closes) - 5):
-                    window = recent_closes[i:i+5]  # 5 candles check window
-                    w_range = (np.max(window) - np.min(window)) / np.min(window) * 100
-                    if w_range < 0.10:  # Dead horizontal channel cap
-                        is_extensively_sideways = True
-                        break
-                if is_extensively_sideways:
+                # --- ULTRA STRICT SIDEWAYS EXCLUSION BOX (MAX 2-4 CANDLES CEILING) ---
+                recent_window = prices[-5:]
+                window_range = (np.max(recent_window) - np.min(recent_window)) / np.min(recent_window) * 100
+                if window_range < 0.08: # If frozen flat for more than 4 candles -> REJECT
                     continue
 
-                # --- 4. 9 & 15 EMA ONE-WAY RIDING LOGIC ---
-                t_intra['EMA_9'] = t_intra['Close'].ewm(span=9, adjust=False).mean()
-                t_intra['EMA_15'] = t_intra['Close'].ewm(span=15, adjust=False).mean()
+                # --- CRITICAL TRACKER: LAST 2 CANDLES SHIELD BREAK DETECTOR ---
+                last_2_lows = lows[-3:-1]
+                last_2_highs = highs[-3:-1]
 
-                ema9_arr = t_intra['EMA_9'].values
-                ema15_arr = t_intra['EMA_15'].values
-                
-                # Check if lines are smoothly tilted and consecutive support is respected
-                is_bullish_ride = (prices[-1] > ema9_arr[-1] > ema15_arr[-1]) and (ema9_arr[-1] > ema9_arr[-2] > ema9_arr[-3])
-                is_bearish_ride = (prices[-1] < ema9_arr[-1] < ema15_arr[-1]) and (ema9_arr[-1] < ema9_arr[-2] < ema9_arr[-3])
+                is_up_trending = True
+                is_down_trending = True
 
-                # RSI (14) Engine
-                delta = t_intra['Close'].diff()
-                gain = (delta.where(delta > 0, 0)).ewm(alpha=1/14, adjust=False).mean()
-                loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, adjust=False).mean()
-                rs = gain / loss
-                rsi = 100 - (100 / (1 + rs.iloc[-1])) if not np.isnan(rs.iloc[-1]) else 50.0
+                # Validation loops over the trajectory path
+                for i in range(-4, 0):
+                    if prices[i] <= lows[i-1] or prices[i] <= lows[i-2]:
+                        is_up_trending = False
+                    if prices[i] >= highs[i-1] or prices[i] >= highs[i-2]:
+                        is_down_trending = False
 
                 sector = SECTOR_MAP.get(ticker, "Other Tickers Block")
                 stock_data = {
                     "Stock Name": ticker.replace(".NS", ""),
                     "Sector": sector,
                     "Live Price": round(latest_price, 2),
-                    "Change %": round(p_change, 2),
-                    "RSI (14)": round(rsi, 2)
+                    "Change %": round(p_change, 2)
                 }
 
-                if is_bullish_ride:
+                # Direction routing
+                if is_up_trending and latest_price > prev_day_close:
                     bullish_stocks.append(stock_data)
-                elif is_bearish_ride:
+                elif is_down_trending and latest_price < prev_day_close:
                     bearish_stocks.append(stock_data)
 
-                # Present time volume surge verification
-                if vol_multiplier >= 1.5 and (is_bullish_ride or is_bearish_ride):
+                # Pure 10-Day Volume Filter confirmation
+                if vol_multiplier >= 1.5 and (is_up_trending or is_down_trending):
                     vol_data = stock_data.copy()
-                    vol_data["Volume Multiplier"] = f"{round(vol_multiplier, 2)}x"
+                    vol_data["10-Day Vol Multiplier"] = f"{round(vol_multiplier, 2)}x"
                     volume_gainers.append(vol_data)
 
                 if sector not in sector_performance:
@@ -211,30 +189,30 @@ def analyze_market_batch():
     return bullish_stocks, bearish_stocks, volume_gainers, sector_performance
 
 # Cloud Core Processing Stream
-with st.spinner("Filtering Pure One-Way 5m Grinding Structural Channels..."):
+with st.spinner("Executing Strict 2-Candle Trajectory Filter Rules..."):
     bullish, bearish, vol_gainers, sectors = analyze_market_batch()
 
 # Layout Design Setup
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("🟢 ONE-WAY UP SIDE MOVES (Riding 9 & 15 EMA smoothly with Small Candles)")
+    st.subheader("🟢 ONE-WAY UP SIDE (Strict Rule: Never Broke Last 2 Candles Low)")
     if bullish:
         st.dataframe(pd.DataFrame(bullish).sort_values(by="Change %", ascending=False).head(10), use_container_width=True)
     else:
-        st.info("Scanning for clean micro-grinding bullish trajectories...")
+        st.info("Searching for stocks cleanly protecting last 2 candles low channels...")
 
-    st.subheader("🔴 ONE-WAY DOWN SIDE MOVES (Dropping below 9 & 15 EMA with Small Candles)")
+    st.subheader("🔴 ONE-WAY DOWN SIDE (Strict Rule: Never Broke Last 2 Candles High)")
     if bearish:
         st.dataframe(pd.DataFrame(bearish).sort_values(by="Change %", ascending=True).head(10), use_container_width=True)
     else:
-        st.info("Scanning for clean micro-grinding bearish trajectories...")
+        st.info("Searching for stocks cleanly distributing below last 2 candles high...")
 
-    st.subheader("📊 TRENDING VOLUME GAINERS (High Live Active Volume + One-Way Rider Active)")
+    st.subheader("📊 TRENDING 10-DAY VOLUME GAINERS (High Present Vol vs Last 10 Days Avg)")
     if vol_gainers:
-        st.dataframe(pd.DataFrame(vol_gainers).sort_values(by="Volume Multiplier", ascending=False), use_container_width=True)
+        st.dataframe(pd.DataFrame(vol_gainers).sort_values(by="10-Day Vol Multiplier", ascending=False), use_container_width=True)
     else:
-        st.info("Monitoring immediate volume blocks on active trends...")
+        st.info("No active trajectory stocks crossing the historical 10-day volume limits.")
 
 with col2:
     st.subheader("🔥 Institutional Sector Heat")
@@ -246,9 +224,9 @@ with col2:
     if sector_summary:
         st.dataframe(pd.DataFrame(sector_summary).sort_values(by="Avg Gain %", ascending=False), use_container_width=True)
     else:
-        st.info("Awaiting macro loop tracks...")
+        st.info("Awaiting macro loops...")
 
-    # --- NIFTY HYPER LOGIC DIRECTION BOX ---
+    # --- NIFTY SECTOR DIRECTION BOX ---
     st.markdown("---")
     st.subheader("🎯 Today's Nifty Direction Bias")
     bias_text, color_code = predict_nifty_bias()
@@ -259,6 +237,6 @@ with col2:
         </div>
     """, unsafe_allow_html=True)
 
-# 5-Minute Auto Refresh Loop
-time.sleep(300)
+# 3-Minute Auto Refresh Loop
+time.sleep(180)
 st.rerun()
