@@ -46,19 +46,28 @@ st.write("15-Year Macro Data • Technical Indicators Core • FII/DII Liquidity
 
 def execute_ultimate_nifty_analysis():
     try:
-        # 1. Fetching Multi-Timeframe Data Blocks
+        # 1. Fetching Multi-Timeframe Data Blocks Safely
         nifty_macro = yf.download("^NSEI", period="max", interval="1d", progress=False)
         nifty_recent = yf.download("^NSEI", period="1mo", interval="1d", progress=False)
         nifty_live = yf.download("^NSEI", period="1d", interval="5m", progress=False)
         
-        if nifty_macro.empty or nifty_live.empty or len(nifty_recent) < 20:
+        if nifty_macro.empty or nifty_live.empty or len(nifty_recent) < 15:
             return "⏳ READING DATA CLOUDS...", "Connecting to live Exchange servers...", "#94a3b8", 0, 0, 0
 
+        # Flatten columns if they contain multi-index series vectors
+        for d in [nifty_macro, nifty_recent, nifty_live]:
+            if isinstance(d.columns, pd.MultiIndex):
+                d.columns = d.columns.get_level_values(0)
+
         # --- TECHNICAL ANALYSIS ENGINE (TA CORE) ---
-        # Calculate Short Term Momentum Slopes and Trendlines
         recent_closes = nifty_recent['Close'].values.flatten()
-        ema_9 = nifty_recent['Close'].ewm(span=9, adjust=False).mean().iloc[-1]
-        ema_21 = nifty_recent['Close'].ewm(span=21, adjust=False).mean().iloc[-1]
+        
+        # Safe structural calculation for short term EMAs
+        nifty_recent['EMA_9'] = nifty_recent['Close'].ewm(span=9, adjust=False).mean()
+        nifty_recent['EMA_21'] = nifty_recent['Close'].ewm(span=21, adjust=False).mean()
+        
+        ema_9 = float(nifty_recent['EMA_9'].values[-1])
+        ema_21 = float(nifty_recent['EMA_21'].values[-1])
         
         # Live Price Action Arrays
         live_prices = nifty_live['Close'].values.flatten()
@@ -74,56 +83,55 @@ def execute_ultimate_nifty_analysis():
         live_atr_pct = (np.mean(intraday_ranges) / opening_tick) * 100
 
         # --- PSYCHOLOGY & INSTITUTION TRAP DETECTION ---
-        # Tracking Top Nifty Heavyweights for Institutional Footprints
         heavyweights = ["RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "TCS.NS"]
-        hw_data = yf.download(heavyweights, period="1d", interval="5m", progress=False)
+        hw_data = yf.download(heavyweights, period="1d", interval="5m", group_by='ticker', progress=False)
         
         fii_buying_pressure = 0
-        retail_panic_index = 0  # High volatility in small bodies means retail traps
+        retail_panic_index = 0
 
         for stock in heavyweights:
             try:
-                s_close = hw_data[stock]['Close'].dropna().values.flatten()
-                s_open = hw_data[stock]['Open'].dropna().values.flatten()
-                s_high = hw_data[stock]['High'].dropna().values.flatten()
-                s_low = hw_data[stock]['Low'].dropna().values.flatten()
-                
-                if s_close[-1] > s_open[0]:
-                    fii_buying_pressure += 2
-                else:
-                    fii_buying_pressure -= 2
+                if stock in hw_data.columns.levels[0]:
+                    s_df = hw_data[stock].dropna()
+                    s_close = s_df['Close'].values.flatten()
+                    s_open = s_df['Open'].values.flatten()
+                    s_high = s_df['High'].values.flatten()
+                    s_low = s_df['Low'].values.flatten()
                     
-                # Psychology Trap Formula: Spike wicks mean retail stop losses are being hunted
-                if (s_high[-1] - s_low[-1]) > (abs(s_close[-1] - s_open[0]) * 2.5):
-                    retail_panic_index += 1
+                    if len(s_close) > 0:
+                        if s_close[-1] > s_open[0]:
+                            fii_buying_pressure += 2
+                        else:
+                            fii_buying_pressure -= 2
+                            
+                        # Psychology Trap Formula
+                        if (s_high[-1] - s_low[-1]) > (abs(s_close[-1] - s_open[0]) * 2.5):
+                            retail_panic_index += 1
             except:
                 continue
 
         # --- 15-YEAR SEASONALITY ALIGNMENT ---
         current_month = datetime.datetime.now().month
-        macro_historical_closes = nifty_macro[nifty_macro.index.month == current_month]['Close']
-        historical_bullish_ratio = float((macro_historical_closes.pct_change() > 0).mean())
+        macro_historical_closes = nifty_macro[nifty_macro.index.month == current_month]['Close'].values.flatten()
+        historical_bullish_ratio = float(np.mean(np.diff(macro_historical_closes) > 0)) if len(macro_historical_closes) > 1 else 0.5
 
         # --- ALGORITHM SCORING MATRIX ---
         score = 0
         
-        # TA Signals
         if current_tick > ema_9: score += 1.5
         if ema_9 > ema_21: score += 1
         if current_tick > opening_tick: score += 2.5
         
-        # Macro & Institutional Psychology Signals
         if historical_bullish_ratio > 0.52: score += 1
         if fii_buying_pressure > 2: score += 3
-        if retail_panic_index > 2 and current_tick > opening_tick: score += 1.5 # Retailers trapped in shorts
+        if retail_panic_index > 2 and current_tick > opening_tick: score += 1.5
 
-        # Opposite Bearish Logic
         if current_tick < ema_9: score -= 1.5
         if ema_9 < ema_21: score -= 1
         if current_tick < opening_tick: score -= 2.5
         if historical_bullish_ratio <= 0.52: score -= 1
         if fii_buying_pressure < -2: score -= 3
-        if retail_panic_index > 2 and current_tick < opening_tick: score -= 1.5 # Retailers trapped in longs
+        if retail_panic_index > 2 and current_tick < opening_tick: score -= 1.5
 
         # --- FINAL DIRECTION SELECTION ROUTER ---
         if score >= 5:
