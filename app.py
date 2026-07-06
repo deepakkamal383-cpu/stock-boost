@@ -46,7 +46,7 @@ WATCHLIST = [
     "GICRE.NS", "NIACL.NS", "LIC.NS", "HINDZINC.NS"
 ]
 
-# COMPREHENSIVE SECTOR MAPPING
+# COMPLETE SECTOR MAPPING
 SECTOR_MAP = {
     "RELIANCE.NS": "Energy", "ONGC.NS": "Energy", "BPCL.NS": "Energy", "IOC.NS": "Energy", "HPCL.NS": "Energy", "HINDPETRO.NS": "Energy", "OIL.NS": "Energy", "MRPL.NS": "Energy",
     "POWERGRID.NS": "Utilities", "NTPC.NS": "Utilities", "JSWENERGY.NS": "Utilities", "TATAPOWER.NS": "Utilities", "SJVN.NS": "Utilities", "NHPC.NS": "Utilities", "SUZLON.NS": "Utilities", "GAIL.NS": "Utilities", "IGL.NS": "Utilities", "MGL.NS": "Utilities", "GUJGASLTD.NS": "Utilities", "TORNTPOWER.NS": "Utilities",
@@ -93,8 +93,42 @@ def analyze_market_batch():
                 vol_multiplier = current_day_vol / avg_hist_vol if avg_hist_vol > 0 else 1.0
 
                 prices = t_intra['Close'].values.flatten()
+                highs = t_intra['High'].values.flatten()
+                lows = t_intra['Low'].values.flatten()
                 latest_price = float(prices[-1])
                 p_change = ((latest_price - prev_day_close) / prev_day_close) * 100
+
+                # --- 1. STRICT CANDLE UNIFORMITY FILTER (ANTI-SPIKE) ---
+                candle_bodies = np.abs(t_intra['Close'].values.flatten() - t_intra['Open'].values.flatten())
+                avg_body = np.mean(candle_bodies)
+                max_body = np.max(candle_bodies[-4:])
+                if max_body > (avg_body * 2.2):
+                    continue
+
+                # --- 2. ULTRA-STRICT DEEP PULLBACK FILTER ---
+                # Checks if the price breaks structural boundaries by dropping too deep from recent high/low peaks
+                if latest_price > prev_day_close:  # Potential Bullish Setup
+                    highest_recent = np.max(highs[-4:])
+                    pullback_depth = ((highest_recent - latest_price) / highest_recent) * 100
+                    if pullback_depth > 0.40:  # Strict 0.4% maximum boundary drop limit
+                        continue
+                else:  # Potential Bearish Setup
+                    lowest_recent = np.min(lows[-4:])
+                    pullback_depth = ((latest_price - lowest_recent) / lowest_recent) * 100
+                    if pullback_depth > 0.40:
+                        continue
+
+                # --- 3. DYNAMIC SIDEWAYS SCANNER (2-5 CANDLES LIMIT) ---
+                recent_closes = prices[-6:]
+                is_stagnant = False
+                for i in range(len(recent_closes) - 4):
+                    window = recent_closes[i:i+4]
+                    window_range = (np.max(window) - np.min(window)) / np.min(window) * 100
+                    if window_range < 0.08:  # Strict dead flat noise wall ceiling
+                        is_stagnant = True
+                        break
+                if is_stagnant:
+                    continue
 
                 # Calculate EMAs: 9, 15, and 50
                 t_intra['EMA_9'] = t_intra['Close'].ewm(span=9, adjust=False).mean()
@@ -104,28 +138,6 @@ def analyze_market_batch():
                 ema9 = float(t_intra['EMA_9'].iloc[-1])
                 ema15 = float(t_intra['EMA_15'].iloc[-1])
                 ema50 = float(t_intra['EMA_50'].iloc[-1])
-
-                # --- 1. STRICT CANDLE UNIFORMITY FILTER (ANTI-SPIKE) ---
-                candle_bodies = np.abs(t_intra['Close'].values.flatten() - t_intra['Open'].values.flatten())
-                avg_body = np.mean(candle_bodies)
-                max_body = np.max(candle_bodies[-4:])
-                
-                if max_body > (avg_body * 2.5): # Strict threshold for small grinding candles
-                    continue
-
-                # --- 2. DYNAMIC SIDEWAYS SCANNER (2-5 CANDLES LIMIT) ---
-                recent_closes = prices[-8:]
-                is_stagnant = False
-                
-                for i in range(len(recent_closes) - 5):
-                    window = recent_closes[i:i+5]
-                    window_range = (np.max(window) - np.min(window)) / np.min(window) * 100
-                    if window_range < 0.12:
-                        is_stagnant = True
-                        break
-                
-                if is_stagnant:
-                    continue
 
                 # RSI Calculation
                 delta = t_intra['Close'].diff()
@@ -143,16 +155,12 @@ def analyze_market_batch():
                     "RSI (14)": round(rsi, 2)
                 }
 
-                # --- 3. STRICT EMA RIBBON ALIGNMENT FILTER ---
-                # Bullish: Price > 9 EMA > 15 EMA > 50 EMA (Consistent Steady Grind Up)
+                # --- 4. EMA RIBBON ALIGNMENT ---
                 if latest_price > ema9 and ema9 > ema15 and ema15 > ema50:
                     bullish_stocks.append(stock_data)
-                
-                # Bearish: Price < 9 EMA < 15 EMA < 50 EMA (Consistent Steady Grind Down)
                 elif latest_price < ema9 and ema9 < ema15 and ema15 < ema50:
                     bearish_stocks.append(stock_data)
 
-                # Volume Surge Allocation
                 if vol_multiplier >= 1.5:
                     vol_data = stock_data.copy()
                     vol_data["Volume Multiplier"] = f"{round(vol_multiplier, 2)}x"
@@ -177,19 +185,17 @@ with st.spinner("Connecting to High-Speed Institutional Ribbon Streams..."):
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("🟢 TOP 10 UP SIDE MOVES (Grinding Wave: Price > 9 > 15 > 50 EMA)")
+    st.subheader("🟢 TOP 10 UP SIDE MOVES (Smooth Dynamic Accumulation - Above 50 EMA)")
     if bullish:
-        # Strict TOP 10 Limit sorted by highest gain
         st.dataframe(pd.DataFrame(bullish).sort_values(by="Change %", ascending=False).head(10), use_container_width=True)
     else:
-        st.info("Searching active steady up-trending ribbons...")
+        st.info("Scanning steady trending charts...")
 
-    st.subheader("🔴 TOP 10 DOWN SIDE MOVES (Grinding Wave: Price < 9 < 15 < 50 EMA)")
+    st.subheader("🔴 TOP 10 DOWN SIDE MOVES (Smooth Dynamic Distribution - Below 50 EMA)")
     if bearish:
-        # Strict TOP 10 Limit sorted by highest loss
         st.dataframe(pd.DataFrame(bearish).sort_values(by="Change %", ascending=True).head(10), use_container_width=True)
     else:
-        st.info("Searching active steady down-trending ribbons...")
+        st.info("Scanning steady trending charts...")
 
     st.subheader("📊 VOLUME GAINERS (High Volume Activity >= 1.5x Multiplier)")
     if vol_gainers:
