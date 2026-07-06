@@ -62,7 +62,6 @@ def execute_ultimate_nifty_analysis():
         # --- TECHNICAL ANALYSIS ENGINE (TA CORE) ---
         recent_closes = nifty_recent['Close'].values.flatten()
         
-        # Safe structural calculation for short term EMAs
         nifty_recent['EMA_9'] = nifty_recent['Close'].ewm(span=9, adjust=False).mean()
         nifty_recent['EMA_21'] = nifty_recent['Close'].ewm(span=21, adjust=False).mean()
         
@@ -192,30 +191,11 @@ else:
     bias, desc, color, scr, fii, rtl = execute_ultimate_nifty_analysis()
     badge_text = f"⏱️ ALGO PROCESSING FEED (Locking at 09:30 AM) | Live Scan: {current_clock}"
 
-# UI Component Output Mapping
-st.markdown(f"""
-    <div class="main-matrix-card">
-        <div class="status-badge">{badge_text}</div>
-        <div style="color: #4b5563; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Calculated Multi-Factor Target</div>
-        <div class="prediction-view" style="color: {color};">{bias}</div>
-        <div class="description-view">{desc}</div>
-        
-        <div class="metrics-container">
-            <div class="metric-box">
-                <div class="metric-val" style="color: #3b82f6;">{scr}</div>
-                <div class="metric-lbl">Model Score</div>
-            </div>
-            <div class="metric-box">
-                <div class="metric-val" style="color: {'#10b981' if fii >= 0 else '#ef4444'};">{fii}</div>
-                <div class="metric-lbl">Inst. Flow</div>
-            </div>
-            <div class="metric-box">
-                <div class="metric-val" style="color: #f59e0b;">{rtl} Blocks</div>
-                <div class="metric-lbl">Retail Trap Risk</div>
-            </div>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+# Unified Clean Inline HTML Formatting (Fixes text block render error)
+fii_color = '#10b981' if fii >= 0 else '#ef4444'
+card_html = f'<div class="main-matrix-card"><div class="status-badge">{badge_text}</div><div style="color: #4b5563; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Calculated Multi-Factor Target</div><div class="prediction-view" style="color: {color};">{bias}</div><div class="description-view">{desc}</div><div class="metrics-container"><div class="metric-box"><div class="metric-val" style="color: #3b82f6;">{scr}</div><div class="metric-lbl">Model Score</div></div><div class="metric-box"><div class="metric-val" style="color: {fii_color};">{fii}</div><div class="metric-lbl">Inst. Flow</div></div><div class="metric-box"><div class="metric-val" style="color: #f59e0b;">{rtl} Blocks</div><div class="metric-lbl">Retail Trap Risk</div></div></div></div>'
+
+st.markdown(card_html, unsafe_allow_html=True)
 
 # 3-Minute Precise Loop Update
 time.sleep(180)
