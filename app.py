@@ -7,7 +7,7 @@ import time
 # Page config and Title
 st.set_page_config(page_title="Stock Boost - Institutional Scanner", layout="wide")
 st.title("🚀 STOCK BOOST – Advanced Institutional Flow & Volume Scanner")
-st.write("Live Market Smooth Structure & Volume Analytics (3-Minute Auto-Refresh Sequence)")
+st.write("Live Market Smooth Structure & Volume Analytics (5-Minute Micro Trend Scanner)")
 
 # 200+ FULL METRIC WATCHLIST
 WATCHLIST = [
@@ -46,7 +46,7 @@ WATCHLIST = [
     "GICRE.NS", "NIACL.NS", "LIC.NS", "HINDZINC.NS"
 ]
 
-# COMPLETE SECTOR MAPPING
+# FULL COMPREHENSIVE SECTOR MAPPING
 SECTOR_MAP = {
     "RELIANCE.NS": "Energy", "ONGC.NS": "Energy", "BPCL.NS": "Energy", "IOC.NS": "Energy", "HPCL.NS": "Energy", "HINDPETRO.NS": "Energy", "OIL.NS": "Energy", "MRPL.NS": "Energy",
     "POWERGRID.NS": "Utilities", "NTPC.NS": "Utilities", "JSWENERGY.NS": "Utilities", "TATAPOWER.NS": "Utilities", "SJVN.NS": "Utilities", "NHPC.NS": "Utilities", "SUZLON.NS": "Utilities", "GAIL.NS": "Utilities", "IGL.NS": "Utilities", "MGL.NS": "Utilities", "GUJGASLTD.NS": "Utilities", "TORNTPOWER.NS": "Utilities",
@@ -66,6 +66,50 @@ SECTOR_MAP = {
     "ADANIPORTS.NS": "Services", "CONCOR.NS": "Services", "DELHIVERY.NS": "Services", "INDIGO.NS": "Services", "IRCTC.NS": "Services", "RVNL.NS": "Services", "ZOMATO.NS": "Services", "JUBLFOOD.NS": "Services", "PVRINOX.NS": "Services", "SUNTV.NS": "Services", "ZEEL.NS": "Services", "NAUKRI.NS": "Services", "TRENT.NS": "Services", "IRB.NS": "Services", "TRIDENT.NS": "Services"
 }
 
+# --- NIFTY DIRECTION PREDICTOR ALGORITHM ---
+def predict_nifty_bias():
+    try:
+        # Download pichle 5 days ka data specifically for Nifty 50 Index (^NSEI)
+        nifty_daily = yf.download("^NSEI", period="6d", interval="1d", progress=False)
+        nifty_intra = yf.download("^NSEI", period="1d", interval="5m", progress=False)
+        
+        if nifty_daily.empty or len(nifty_daily) < 5 or nifty_intra.empty:
+            return "⏳ Awaiting Trend Matrix Data", "gray"
+
+        # Multi-Day Trend Calculations
+        closes = nifty_daily['Close'].values.flatten()
+        nifty_daily['EMA_5'] = nifty_daily['Close'].ewm(span=5, adjust=False).mean()
+        latest_ema = float(nifty_daily['EMA_5'].iloc[-1])
+        current_close = float(closes[-1])
+        
+        # Micro structural logic for today's dynamic volatility
+        intra_prices = nifty_intra['Close'].values.flatten()
+        current_live_price = float(intra_prices[-1])
+        
+        # Trend Angle calculation based on consecutive gains
+        consecutive_ups = sum(1 for i in range(-4, 0) if closes[i] > closes[i-1])
+        
+        # Volatility check to distinguish trend vs sideways
+        daily_returns = np.abs(np.diff(closes[-5:]) / closes[-5:-1]) * 100
+        avg_volatility = np.mean(daily_returns)
+
+        # Classification Engine Matrix
+        if current_live_price >= latest_ema and consecutive_ups >= 2:
+            if avg_volatility > 0.45:
+                return "🚀 BULLISH TRENDING (Strong Up Side Flow)", "#00FF00"
+            else:
+                return "🥱 BULLISH SIDEWAYS (Slow Creeping Up Side)", "#99FF99"
+        elif current_live_price < latest_ema and consecutive_ups <= 2:
+            if avg_volatility > 0.45:
+                return "📉 BEARISH TRENDING (Strong Down Side Pressure)", "#FF3333"
+            else:
+                return "⚠️ BEARISH SIDEWAYS (Slow Structural Drop)", "#FF9999"
+        else:
+            return "🥱 COMPLETELY SIDEWAYS (Dead Rangebound Floor)", "#FFFF99"
+            
+    except Exception:
+        return "⏳ Syncing Nifty Pulse Clouds...", "white"
+
 def analyze_market_batch():
     bullish_stocks = []
     bearish_stocks = []
@@ -73,8 +117,8 @@ def analyze_market_batch():
     sector_performance = {}
 
     try:
-        data_intraday = yf.download(WATCHLIST, period="2d", interval="15m", group_by='ticker', progress=False)
-        data_daily = yf.download(WATCHLIST, period="6d", interval="1d", group_by='ticker', progress=False)
+        data_intraday = yf.download(WATCHLIST, period="1d", interval="5m", group_by='ticker', progress=False)
+        data_daily = yf.download(WATCHLIST, period="5d", interval="1d", group_by='ticker', progress=False)
         
         for ticker in WATCHLIST:
             try:
@@ -84,11 +128,11 @@ def analyze_market_batch():
                 t_daily = data_daily[ticker].dropna()
                 t_intra = data_intraday[ticker].dropna()
 
-                if len(t_daily) < 2 or len(t_intra) < 6:
+                if len(t_daily) < 2 or len(t_intra) < 15:
                     continue
 
                 prev_day_close = float(t_daily['Close'].iloc[-2])
-                avg_hist_vol = float(t_daily['Volume'].iloc[-5:-1].mean())
+                avg_hist_vol = float(t_daily['Volume'].iloc[-4:].mean())
                 current_day_vol = float(t_daily['Volume'].iloc[-1])
                 vol_multiplier = current_day_vol / avg_hist_vol if avg_hist_vol > 0 else 1.0
 
@@ -101,33 +145,32 @@ def analyze_market_batch():
                 # --- 1. STRICT CANDLE UNIFORMITY FILTER (ANTI-SPIKE) ---
                 candle_bodies = np.abs(t_intra['Close'].values.flatten() - t_intra['Open'].values.flatten())
                 avg_body = np.mean(candle_bodies)
-                max_body = np.max(candle_bodies[-4:])
-                if max_body > (avg_body * 2.2):
+                max_recent_body = np.max(candle_bodies[-4:])
+                if max_recent_body > (avg_body * 2.0):
                     continue
 
-                # --- 2. ULTRA-STRICT DEEP PULLBACK FILTER ---
-                # Checks if the price breaks structural boundaries by dropping too deep from recent high/low peaks
-                if latest_price > prev_day_close:  # Potential Bullish Setup
-                    highest_recent = np.max(highs[-4:])
-                    pullback_depth = ((highest_recent - latest_price) / highest_recent) * 100
-                    if pullback_depth > 0.40:  # Strict 0.4% maximum boundary drop limit
+                # --- 2. MICRO-PULLBACK FILTER (MAX 0.25% RETRACEMENT) ---
+                if latest_price > prev_day_close:
+                    highest_peak = np.max(highs[-5:])
+                    pullback = ((highest_peak - latest_price) / highest_peak) * 100
+                    if pullback > 0.25:
                         continue
-                else:  # Potential Bearish Setup
-                    lowest_recent = np.min(lows[-4:])
-                    pullback_depth = ((latest_price - lowest_recent) / lowest_recent) * 100
-                    if pullback_depth > 0.40:
+                else:
+                    lowest_peak = np.min(lows[-5:])
+                    pullback = ((latest_price - lowest_peak) / lowest_peak) * 100
+                    if pullback > 0.25:
                         continue
 
-                # --- 3. DYNAMIC SIDEWAYS SCANNER (2-5 CANDLES LIMIT) ---
-                recent_closes = prices[-6:]
-                is_stagnant = False
-                for i in range(len(recent_closes) - 4):
-                    window = recent_closes[i:i+4]
-                    window_range = (np.max(window) - np.min(window)) / np.min(window) * 100
-                    if window_range < 0.08:  # Strict dead flat noise wall ceiling
-                        is_stagnant = True
+                # --- 3. SIDEWAYS WINDOW DECAY FILTER (12 CANDLES BLOCK) ---
+                recent_closes = prices[-12:]
+                is_sideways = False
+                for i in range(len(recent_closes) - 6):
+                    window = recent_closes[i:i+6]
+                    w_range = (np.max(window) - np.min(window)) / np.min(window) * 100
+                    if w_range < 0.15:
+                        is_sideways = True
                         break
-                if is_stagnant:
+                if is_sideways:
                     continue
 
                 # Calculate EMAs: 9, 15, and 50
@@ -139,7 +182,7 @@ def analyze_market_batch():
                 ema15 = float(t_intra['EMA_15'].iloc[-1])
                 ema50 = float(t_intra['EMA_50'].iloc[-1])
 
-                # RSI Calculation
+                # RSI (14) Engine
                 delta = t_intra['Close'].diff()
                 gain = (delta.where(delta > 0, 0)).ewm(alpha=1/14, adjust=False).mean()
                 loss = (-delta.where(delta < 0, 0)).ewm(alpha=1/14, adjust=False).mean()
@@ -177,8 +220,8 @@ def analyze_market_batch():
 
     return bullish_stocks, bearish_stocks, volume_gainers, sector_performance
 
-# Fire Engine Streams
-with st.spinner("Connecting to High-Speed Institutional Ribbon Streams..."):
+# Run Data Extraction Cloud Engine
+with st.spinner("Processing Data Ribbon Matrix..."):
     bullish, bearish, vol_gainers, sectors = analyze_market_batch()
 
 # Layout Build
@@ -189,13 +232,13 @@ with col1:
     if bullish:
         st.dataframe(pd.DataFrame(bullish).sort_values(by="Change %", ascending=False).head(10), use_container_width=True)
     else:
-        st.info("Scanning steady trending charts...")
+        st.info("Scanning steady 5m trending channels...")
 
     st.subheader("🔴 TOP 10 DOWN SIDE MOVES (Smooth Dynamic Distribution - Below 50 EMA)")
     if bearish:
         st.dataframe(pd.DataFrame(bearish).sort_values(by="Change %", ascending=True).head(10), use_container_width=True)
     else:
-        st.info("Scanning steady trending charts...")
+        st.info("Scanning steady 5m trending channels...")
 
     st.subheader("📊 VOLUME GAINERS (High Volume Activity >= 1.5x Multiplier)")
     if vol_gainers:
@@ -214,6 +257,17 @@ with col2:
         st.dataframe(pd.DataFrame(sector_summary).sort_values(by="Avg Gain %", ascending=False), use_container_width=True)
     else:
         st.info("Awaiting structural data loops...")
+
+    # --- NIFTY BIAS SCOPE BOX (PLACED CRITICALLY BELOW SECTOR HEAT) ---
+    st.markdown("---")
+    st.subheader("🎯 Today's Nifty Direction Bias")
+    bias_text, color_code = predict_nifty_bias()
+    st.markdown(f"""
+        <div style="background-color:#11151c; padding:20px; border-radius:10px; border-left: 8px solid {color_code};">
+            <h4 style="margin:0; color:white; font-size:16px;">Calculated Multi-Day Momentum Trend Matrix:</h4>
+            <p style="margin:10px 0 0 0; color:{color_code}; font-size:20px; font-weight:bold;">{bias_text}</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 # 3-Minute Refresh Sequence
 time.sleep(180)
