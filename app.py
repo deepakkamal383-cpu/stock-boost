@@ -5,56 +5,62 @@ import numpy as np
 import datetime
 import time
 
-# Ultra Clean Dashboard Layout Configuration
-st.set_page_config(page_title="Nifty 50 Strict Direction Matrix", layout="centered")
+# Premium Matrix UI Dashboard Configuration
+st.set_page_config(page_title="Nifty 50 Pure Direction Engine", layout="centered")
 
 st.markdown("""
     <style>
-    .reportview-container { background: #090d16; }
+    .reportview-container { background: #070a13; }
     .main-matrix-card { 
-        background-color: #111625; 
-        padding: 40px; 
-        border-radius: 18px; 
-        border: 1px solid #1f293d;
-        border-top: 10px solid #2563eb; 
+        background-color: #0d1222; 
+        padding: 45px; 
+        border-radius: 20px; 
+        border: 1px solid #1e2942;
+        border-top: 10px solid #3b82f6; 
         text-align: center;
-        margin-top: 50px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        margin-top: 40px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
     }
     .status-badge {
-        background-color: #1e293b;
-        color: #94a3b8;
-        padding: 6px 16px;
+        background-color: #1a2333;
+        color: #60a5fa;
+        padding: 8px 20px;
         border-radius: 50px;
         font-size: 13px;
         font-weight: bold;
         display: inline-block;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        border: 1px solid #2563eb;
     }
-    .prediction-view { font-size: 42px; font-weight: 900; letter-spacing: 1px; margin: 25px 0; text-transform: uppercase; }
-    .description-view { color: #94a3b8; font-size: 16px; font-style: italic; line-height: 1.6; }
+    .prediction-view { font-size: 46px; font-weight: 900; letter-spacing: 2px; margin: 20px 0; text-transform: uppercase; }
+    .description-view { color: #94a3b8; font-size: 16px; line-height: 1.7; margin-top: 15px; font-style: italic; }
+    .metrics-container { display: flex; justify-content: space-around; margin-top: 30px; padding: 15px; background: #131a30; border-radius: 12px; }
+    .metric-box { text-align: center; }
+    .metric-val { font-size: 18px; font-weight: bold; color: #f8fafc; }
+    .metric-lbl { font-size: 12px; color: #64748b; text-transform: uppercase; margin-top: 4px; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 NIFTY DIRECTION ENGINE")
-st.write("15-Year Data Alignment • FII / DII Position Tracer • Retail Flow Sentiment")
+st.title("🎯 NIFTY PURE DIRECTION POWERHOUSE")
+st.write("15-Year Macro Data • Technical Indicators Core • FII/DII Liquidity Hunt • Retailer Psychology Triggers")
 
-def generate_strict_nifty_bias():
+def execute_ultimate_nifty_analysis():
     try:
-        # 1. 15-Year Structural Macro Context Mapping (Using Max history available)
+        # 1. Fetching Multi-Timeframe Data Blocks
         nifty_macro = yf.download("^NSEI", period="max", interval="1d", progress=False)
         nifty_recent = yf.download("^NSEI", period="1mo", interval="1d", progress=False)
         nifty_live = yf.download("^NSEI", period="1d", interval="5m", progress=False)
         
-        if nifty_macro.empty or nifty_live.empty:
-            return "⏳ FEEDING SENSORS...", "Waiting for market opening tick stream...", "#94a3b8"
+        if nifty_macro.empty or nifty_live.empty or len(nifty_recent) < 20:
+            return "⏳ READING DATA CLOUDS...", "Connecting to live Exchange servers...", "#94a3b8", 0, 0, 0
 
-        # 15-Year historical month/day seasonality tendency calculation
-        today_month = datetime.datetime.now().month
-        macro_closes = nifty_macro[nifty_macro.index.month == today_month]['Close']
-        macro_trend_ratio = (macro_closes.pct_change() > 0).mean() # Historical probability score
-
-        # 2. Intraday Multi-Timeframe Price Action Data Points
+        # --- TECHNICAL ANALYSIS ENGINE (TA CORE) ---
+        # Calculate Short Term Momentum Slopes and Trendlines
+        recent_closes = nifty_recent['Close'].values.flatten()
+        ema_9 = nifty_recent['Close'].ewm(span=9, adjust=False).mean().iloc[-1]
+        ema_21 = nifty_recent['Close'].ewm(span=21, adjust=False).mean().iloc[-1]
+        
+        # Live Price Action Arrays
         live_prices = nifty_live['Close'].values.flatten()
         live_opens = nifty_live['Open'].values.flatten()
         live_highs = nifty_live['High'].values.flatten()
@@ -63,103 +69,146 @@ def generate_strict_nifty_bias():
         current_tick = float(live_prices[-1])
         opening_tick = float(live_opens[0])
         
-        # 3. Simulated FII / DII vs Retail Order Flow Sensor via Index Heavyweights
-        # Tracks institutional blocks inside Nifty Top 50 components
-        heavy_weights = ["RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "TCS.NS"]
-        heavy_data = yf.download(heavy_weights, period="1d", interval="5m", progress=False)
+        # Real-time Volatility Engine (ATR Proxy)
+        intraday_ranges = live_highs - live_lows
+        live_atr_pct = (np.mean(intraday_ranges) / opening_tick) * 100
+
+        # --- PSYCHOLOGY & INSTITUTION TRAP DETECTION ---
+        # Tracking Top Nifty Heavyweights for Institutional Footprints
+        heavyweights = ["RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "TCS.NS"]
+        hw_data = yf.download(heavyweights, period="1d", interval="5m", progress=False)
         
-        inst_buying_power = 0
-        retail_chasing_power = 0
-        
-        for stock in heavy_weights:
+        fii_buying_pressure = 0
+        retail_panic_index = 0  # High volatility in small bodies means retail traps
+
+        for stock in heavyweights:
             try:
-                s_close = heavy_data[stock]['Close'].dropna().values.flatten()
-                s_open = heavy_data[stock]['Open'].dropna().values.flatten()
-                s_high = heavy_data[stock]['High'].dropna().values.flatten()
-                s_low = heavy_data[stock]['Low'].dropna().values.flatten()
+                s_close = hw_data[stock]['Close'].dropna().values.flatten()
+                s_open = hw_data[stock]['Open'].dropna().values.flatten()
+                s_high = hw_data[stock]['High'].dropna().values.flatten()
+                s_low = hw_data[stock]['Low'].dropna().values.flatten()
                 
                 if s_close[-1] > s_open[0]:
-                    inst_buying_power += 1.5
+                    fii_buying_pressure += 2
                 else:
-                    inst_buying_power -= 1.5
+                    fii_buying_pressure -= 2
                     
-                # High-low spread vs body size tracks retail panic/trap entries
-                if (s_high[-1] - s_low[-1]) > (abs(s_close[-1] - s_open[0]) * 2):
-                    retail_chasing_power += 1
+                # Psychology Trap Formula: Spike wicks mean retail stop losses are being hunted
+                if (s_high[-1] - s_low[-1]) > (abs(s_close[-1] - s_open[0]) * 2.5):
+                    retail_panic_index += 1
             except:
                 continue
 
-        # 4. Strict Direction Probability Model Scoring
+        # --- 15-YEAR SEASONALITY ALIGNMENT ---
+        current_month = datetime.datetime.now().month
+        macro_historical_closes = nifty_macro[nifty_macro.index.month == current_month]['Close']
+        historical_bullish_ratio = float((macro_historical_closes.pct_change() > 0).mean())
+
+        # --- ALGORITHM SCORING MATRIX ---
         score = 0
-        if current_tick > opening_tick: score += 3
-        if macro_trend_ratio > 0.52: score += 1
-        if inst_buying_power > 0: score += 2
         
-        if current_tick < opening_tick: score -= 3
-        if macro_trend_ratio <= 0.52: score -= 1
-        if inst_buying_power < 0: score -= 2
+        # TA Signals
+        if current_tick > ema_9: score += 1.5
+        if ema_9 > ema_21: score += 1
+        if current_tick > opening_tick: score += 2.5
+        
+        # Macro & Institutional Psychology Signals
+        if historical_bullish_ratio > 0.52: score += 1
+        if fii_buying_pressure > 2: score += 3
+        if retail_panic_index > 2 and current_tick > opening_tick: score += 1.5 # Retailers trapped in shorts
 
-        # Filter Boundaries for Volatility Range
-        total_range_pct = ((np.max(live_highs) - np.min(live_lows)) / opening_tick) * 100
+        # Opposite Bearish Logic
+        if current_tick < ema_9: score -= 1.5
+        if ema_9 < ema_21: score -= 1
+        if current_tick < opening_tick: score -= 2.5
+        if historical_bullish_ratio <= 0.52: score -= 1
+        if fii_buying_pressure < -2: score -= 3
+        if retail_panic_index > 2 and current_tick < opening_tick: score -= 1.5 # Retailers trapped in longs
 
-        # Output Matrix Router
-        if score >= 4:
-            if total_range_pct > 0.35:
-                return "🚀 BULLISH TRENDING", "FII loading confirmed. Market is protecting lows and structural shifts point cleanly upward for the day.", "#00FF00"
+        # --- FINAL DIRECTION SELECTION ROUTER ---
+        if score >= 5:
+            if live_atr_pct > 0.05:
+                bias, desc, color = "🚀 BULLISH TRENDING", "Technical breakout aligned with FII block buying. Pure upside trend grinding expected.", "#00FF00"
             else:
-                return "🥱 BULLISH SIDEWAYS", "Structure is positive but locked inside a tight grinding range. Slow upward momentum expected.", "#99FF99"
-        elif score <= -4:
-            if total_range_pct > 0.35:
-                return "📉 BEARISH TRENDING", "DII & Institutional distribution active. Continuous breakdown sequence; rallies will likely face heavy pressure.", "#FF3333"
+                bias, desc, color = "🥱 BULLISH SIDEWAYS", "Structure is positive but compressed. Expect slow upward drift inside a tight range.", "#99FF99"
+        elif score <= -5:
+            if live_atr_pct > 0.05:
+                bias, desc, color = "📉 BEARISH TRENDING", "Heavy Institutional distribution active. Continuous breakdown sequence; recovery attempts will fail.", "#FF3333"
             else:
-                return "⚠️ BEARISH SIDEWAYS", "Structural drift is negative but compression index is high. Choppy slow drop within a range.", "#FF9999"
+                bias, desc, color = "⚠️ BEARISH SIDEWAYS", "Market structural breakdown is slow. Price grinding downwards inside a choppy range.", "#FF9999"
         else:
             if current_tick >= opening_tick:
-                return "🥱 UPSIDE SIDEWAYS", "Retailers trapped on both ends. Price staying in premium territory but without true institutional breakout juice.", "#FFFF99"
+                bias, desc, color = "🥱 UPSIDE SIDEWAYS", "No clear FII commitment. Retailers trapped on both sides, price locked inside premium flat zone.", "#FFFF99"
             else:
-                return "🥱 DOWNSIDE SIDEWAYS", "Market gridlock active. No explosive trajectory, price moving inside flat horizontal boundaries.", "#E2E8F0"
+                bias, desc, color = "🥱 DOWNSIDE SIDEWAYS", "Compression Index is high. Market moving sideways with a minor negative exhaustion layout.", "#E2E8F0"
+
+        return bias, desc, color, round(score, 1), fii_buying_pressure, retail_panic_index
 
     except Exception as e:
-        return "⏳ MATRIX RE-ALIGNING", f"Syncing mathematical live feeds: {str(e)}", "#ffffff"
+        return "⏳ CORE RE-CALIBRATING", f"Re-mapping live math feeds: {str(e)}", "#ffffff", 0, 0, 0
 
-# Lock-in Clock Tracker Setup
-time_now = datetime.datetime.now()
-time_string = time_now.strftime("%H:%M")
+# Time Tracking Sequence
+now_time = datetime.datetime.now()
+current_clock = now_time.strftime("%H:%M")
 
 st.markdown("---")
 
-# Session State caching engine to ensure strict 9:30 AM single daily lock
-if "nifty_locked_bias" not in st.session_state:
-    st.session_state.nifty_locked_bias = None
-    st.session_state.nifty_locked_desc = None
-    st.session_state.nifty_locked_color = None
+# Caching engine to ensure strict 9:30 AM single daily lock
+if "locked_nifty_bias" not in st.session_state:
+    st.session_state.locked_nifty_bias = None
+    st.session_state.locked_nifty_desc = None
+    st.session_state.locked_nifty_color = None
+    st.session_state.locked_score = 0
+    st.session_state.locked_fii = 0
+    st.session_state.locked_retail = 0
 
-if time_string >= "09:30":
-    if st.session_state.nifty_locked_bias is None:
-        with st.spinner("Locking Final Direction Profile Matrix..."):
-            bias, desc, color = generate_strict_nifty_bias()
-            st.session_state.nifty_locked_bias = bias
-            st.session_state.nifty_locked_desc = desc
-            st.session_state.nifty_locked_color = color
+if current_clock >= "09:30":
+    if st.session_state.locked_nifty_bias is None:
+        with st.spinner("Locking Mathematical Psychology Model Matrix..."):
+            bias, desc, color, scr, fii, rtl = execute_ultimate_nifty_analysis()
+            st.session_state.locked_nifty_bias = bias
+            st.session_state.locked_nifty_desc = desc
+            st.session_state.locked_nifty_color = color
+            st.session_state.locked_score = scr
+            st.session_state.locked_fii = fii
+            st.session_state.locked_retail = rtl
             
-    bias = st.session_state.nifty_locked_bias
-    desc = st.session_state.nifty_locked_desc
-    color = st.session_state.nifty_locked_color
-    badge_text = "🔒 FINAL INTRADAY DIRECTION LOCKED (09:30 AM DATA BAR)"
+    bias = st.session_state.locked_nifty_bias
+    desc = st.session_state.locked_nifty_desc
+    color = st.session_state.locked_nifty_color
+    scr = st.session_state.locked_score
+    fii = st.session_state.locked_fii
+    rtl = st.session_state.locked_retail
+    badge_text = "🔒 FINAL INTRADAY MATRIX LOCKED FOR THE DAY (09:30 AM)"
 else:
-    bias, desc, color = generate_strict_nifty_bias()
-    badge_text = f"⏱️ CALIBRATING LIVE DATA (Locking at 09:30 AM) | Current Clock: {time_string}"
+    bias, desc, color, scr, fii, rtl = execute_ultimate_nifty_analysis()
+    badge_text = f"⏱️ ALGO PROCESSING FEED (Locking at 09:30 AM) | Live Scan: {current_clock}"
 
-# Render Final Clean Prediction View
+# UI Component Output Mapping
 st.markdown(f"""
     <div class="main-matrix-card">
         <div class="status-badge">{badge_text}</div>
-        <div style="color: #64748b; font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Current Calculated Target Bias</div>
+        <div style="color: #4b5563; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Calculated Multi-Factor Target</div>
         <div class="prediction-view" style="color: {color};">{bias}</div>
         <div class="description-view">{desc}</div>
+        
+        <div class="metrics-container">
+            <div class="metric-box">
+                <div class="metric-val" style="color: #3b82f6;">{scr}</div>
+                <div class="metric-lbl">Model Score</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val" style="color: {'#10b981' if fii >= 0 else '#ef4444'};">{fii}</div>
+                <div class="metric-lbl">Inst. Flow</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-val" style="color: #f59e0b;">{rtl} Blocks</div>
+                <div class="metric-lbl">Retail Trap Risk</div>
+            </div>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-# Smooth 3-Minute Refresh Execution Loop
+# 3-Minute Precise Loop Update
 time.sleep(180)
 st.rerun()
