@@ -2,201 +2,140 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import datetime
 import time
 
-# Premium Matrix UI Dashboard Configuration
-st.set_page_config(page_title="Nifty 50 Pure Direction Engine", layout="centered")
+# Ultra-wide Layout Page Configuration
+st.set_page_config(page_title="Volume Gainer Scanner", layout="wide")
+st.title("📊 institutional Volume Flow Scanner (200+ F&O Matrix)")
+st.write("Live 5-Minute Volume Surge Tracker • High Real-Time Accumulation vs 10-Day Baseline")
 
-st.markdown("""
-    <style>
-    .reportview-container { background: #070a13; }
-    .main-matrix-card { 
-        background-color: #0d1222; 
-        padding: 45px; 
-        border-radius: 20px; 
-        border: 1px solid #1e2942;
-        border-top: 10px solid #3b82f6; 
-        text-align: center;
-        margin-top: 40px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-    }
-    .status-badge {
-        background-color: #1a2333;
-        color: #60a5fa;
-        padding: 8px 20px;
-        border-radius: 50px;
-        font-size: 13px;
-        font-weight: bold;
-        display: inline-block;
-        margin-bottom: 25px;
-        border: 1px solid #2563eb;
-    }
-    .prediction-view { font-size: 46px; font-weight: 900; letter-spacing: 2px; margin: 20px 0; text-transform: uppercase; }
-    .description-view { color: #94a3b8; font-size: 16px; line-height: 1.7; margin-top: 15px; font-style: italic; }
-    .metrics-container { display: flex; justify-content: space-around; margin-top: 30px; padding: 15px; background: #131a30; border-radius: 12px; }
-    .metric-box { text-align: center; }
-    .metric-val { font-size: 18px; font-weight: bold; color: #f8fafc; }
-    .metric-lbl { font-size: 12px; color: #64748b; text-transform: uppercase; margin-top: 4px; }
-    </style>
-""", unsafe_allow_html=True)
+# COMPLETE 200+ F&O WATCHLIST
+WATCHLIST = [
+    "RELIANCE.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "HDFCBANK.NS", "BHARTIARTL.NS",
+    "SBIN.NS", "LTIM.NS", "LT.NS", "ITC.NS", "AXISBANK.NS", "KOTAKBANK.NS", "HINDUNILVR.NS",
+    "BAJFINANCE.NS", "MARUTI.NS", "M&M.NS", "TATASTEEL.NS", "TATAMOTORS.NS", "POWERGRID.NS",
+    "NTPC.NS", "ADANIENT.NS", "ADANIPORTS.NS", "COALINDIA.NS", "SUNPHARMA.NS", "CIPLA.NS",
+    "JIOFIN.NS", "GRASIM.NS", "ULTRACEMCO.NS", "INDUSINDBK.NS", "BPCL.NS", "IOC.NS",
+    "HINDALCO.NS", "BAJAJFINSV.NS", "EICHERMOT.NS", "HEROMOTOCO.NS", "BRITANNIA.NS",
+    "NESTLEIND.NS", "WIPRO.NS", "TECHM.NS", "HCLTECH.NS", "ONGC.NS", "APOLLOHOSP.NS",
+    "DRREDDY.NS", "DIVISLAB.NS", "SBILIFE.NS", "HDFCLIFE.NS", "BAJAJ-AUTO.NS", "TITAN.NS",
+    "ASIANPAINT.NS", "JSWSTEEL.NS", "CHOLAFIN.NS", "SHRIRAMFIN.NS", "DLF.NS", "GODREJPROP.NS",
+    "BEL.NS", "HAL.NS", "BHEL.NS", "REC.NS", "PFC.NS", "GAIL.NS", "SAIL.NS", "NMDC.NS",
+    "VOLTAS.NS", "DIXON.NS", "POLYCAB.NS", "KEI.NS", "HAVELLS.NS", "AMBUJACEM.NS", "ACC.NS",
+    "PIDILITIND.NS", "BERGEPAINT.NS", "COLPAL.NS", "PGHH.NS", "MCDOWELL-N.NS", "VBL.NS",
+    "AARTIIND.NS", "ABB.NS", "ABBOTINDIA.NS", "ABCAPITAL.NS", "ABFRL.NS", "ALKEM.NS",
+    "ALOKINDS.NS", "APOLLOTYRE.NS", "ASHOKLEY.NS", "ASTRAL.NS", "ATUL.NS",
+    "AUBANK.NS", "AUROPHARMA.NS", "BALKRISIND.NS", "BALRAMCHIN.NS",
+    "BANDHANBNK.NS", "BANKBARODA.NS", "BANKINDIA.NS", "BATAINDIA.NS", "BHARATFORG.NS",
+    "BIOCON.NS", "BOSCHLTD.NS", "BSOFT.NS", "CANBK.NS", "CANFINHOME.NS", "CHAMBLFERT.NS",
+    "COFORGE.NS", "CONCOR.NS", "COROMANDEL.NS", "CROMPTON.NS", "CUB.NS", "CUMMINSIND.NS",
+    "CYIENT.NS", "DABUR.NS", "DALBHARAT.NS", "DEEPAKNTR.NS", "DELHIVERY.NS", "EXIDEIND.NS",
+    "FEDERALBNK.NS", "FORTIS.NS", "GLENMARK.NS", "GMRINFRA.NS", "GODREJCP.NS", "GRANULES.NS",
+    "GUJGASLTD.NS", "GNFC.NS", "HINDCOPPER.NS", "HINDPETRO.NS", "HUDCO.NS", "IDBI.NS",
+    "IDEA.NS", "IDFC.NS", "IDFCFIRSTB.NS", "IEX.NS", "IGL.NS", "INDIGO.NS", "INDUSTOWER.NS",
+    "IPCALAB.NS", "IRB.NS", "IRCTC.NS", "IRFC.NS", "JKCEMENT.NS", "JSWENERGY.NS", "JUBLFOOD.NS",
+    "KALYANKJIL.NS", "LICHSGFIN.NS", "LUPIN.NS", "MANAPPURAM.NS", "MRF.NS", "MGL.NS",
+    "MOTHERSON.NS", "MPHASIS.NS", "MRPL.NS", "MUTHOOTFIN.NS", "NATIONALUM.NS", "NAVINFLUOR.NS",
+    "NAUKRI.NS", "OBEROIRLTY.NS", "OFSS.NS", "OIL.NS", "PAGEIND.NS", "PEL.NS", "PERSISTENT.NS",
+    "PETRONET.NS", "PNB.NS", "PVRINOX.NS", "RAMCOCEM.NS", "RBLBANK.NS", "RECLTD.NS",
+    "RVNL.NS", "SHREECEM.NS", "SIEMENS.NS", "SRF.NS", "SUPREMEIND.NS", "SUNTV.NS",
+    "SYNGENE.NS", "TATACOMM.NS", "TATACHEM.NS", "TATAELXSI.NS", "TATAPOWER.NS", "TATACONSUM.NS",
+    "TORNTPOWER.NS", "TRENT.NS", "TRIDENT.NS", "TVSMOTOR.NS", "UBL.NS", "UCOBANK.NS",
+    "UPL.NS", "UNIONBANK.NS", "ZEEL.NS", "ZOMATO.NS", "ZYDUSLIFE.NS", "JINDALSTEL.NS",
+    "SJVN.NS", "NHPC.NS", "MAHABANK.NS", "CENTRALBK.NS", "IOB.NS", "SUZLON.NS", "IREDA.NS",
+    "GICRE.NS", "NIACL.NS", "LIC.NS", "HINDZINC.NS"
+]
 
-st.title("🎯 NIFTY PURE DIRECTION POWERHOUSE")
-st.write("15-Year Macro Data • Technical Indicators Core • FII/DII Liquidity Hunt • Retailer Psychology Triggers")
+def scan_volume_gainers():
+    up_gainers = []
+    down_gainers = []
 
-def execute_ultimate_nifty_analysis():
     try:
-        # 1. Fetching Multi-Timeframe Data Blocks Safely
-        nifty_macro = yf.download("^NSEI", period="max", interval="1d", progress=False)
-        nifty_recent = yf.download("^NSEI", period="1mo", interval="1d", progress=False)
-        nifty_live = yf.download("^NSEI", period="1d", interval="5m", progress=False)
+        # Batch downloads to keep requests safe and fast
+        data_intraday = yf.download(WATCHLIST, period="1d", interval="5m", group_by='ticker', progress=False)
+        data_daily = yf.download(WATCHLIST, period="11d", interval="1d", group_by='ticker', progress=False)
         
-        if nifty_macro.empty or nifty_live.empty or len(nifty_recent) < 15:
-            return "⏳ READING DATA CLOUDS...", "Connecting to live Exchange servers...", "#94a3b8", 0, 0, 0
-
-        # Flatten columns if they contain multi-index series vectors
-        for d in [nifty_macro, nifty_recent, nifty_live]:
-            if isinstance(d.columns, pd.MultiIndex):
-                d.columns = d.columns.get_level_values(0)
-
-        # --- TECHNICAL ANALYSIS ENGINE (TA CORE) ---
-        recent_closes = nifty_recent['Close'].values.flatten()
-        
-        nifty_recent['EMA_9'] = nifty_recent['Close'].ewm(span=9, adjust=False).mean()
-        nifty_recent['EMA_21'] = nifty_recent['Close'].ewm(span=21, adjust=False).mean()
-        
-        ema_9 = float(nifty_recent['EMA_9'].values[-1])
-        ema_21 = float(nifty_recent['EMA_21'].values[-1])
-        
-        # Live Price Action Arrays
-        live_prices = nifty_live['Close'].values.flatten()
-        live_opens = nifty_live['Open'].values.flatten()
-        live_highs = nifty_live['High'].values.flatten()
-        live_lows = nifty_live['Low'].values.flatten()
-
-        current_tick = float(live_prices[-1])
-        opening_tick = float(live_opens[0])
-        
-        # Real-time Volatility Engine (ATR Proxy)
-        intraday_ranges = live_highs - live_lows
-        live_atr_pct = (np.mean(intraday_ranges) / opening_tick) * 100
-
-        # --- PSYCHOLOGY & INSTITUTION TRAP DETECTION ---
-        heavyweights = ["RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "TCS.NS"]
-        hw_data = yf.download(heavyweights, period="1d", interval="5m", group_by='ticker', progress=False)
-        
-        fii_buying_pressure = 0
-        retail_panic_index = 0
-
-        for stock in heavyweights:
+        for ticker in WATCHLIST:
             try:
-                if stock in hw_data.columns.levels[0]:
-                    s_df = hw_data[stock].dropna()
-                    s_close = s_df['Close'].values.flatten()
-                    s_open = s_df['Open'].values.flatten()
-                    s_high = s_df['High'].values.flatten()
-                    s_low = s_df['Low'].values.flatten()
-                    
-                    if len(s_close) > 0:
-                        if s_close[-1] > s_open[0]:
-                            fii_buying_pressure += 2
-                        else:
-                            fii_buying_pressure -= 2
-                            
-                        # Psychology Trap Formula
-                        if (s_high[-1] - s_low[-1]) > (abs(s_close[-1] - s_open[0]) * 2.5):
-                            retail_panic_index += 1
-            except:
+                if ticker not in data_daily.columns.levels[0] or ticker not in data_intraday.columns.levels[0]:
+                    continue
+                
+                t_daily = data_daily[ticker].dropna()
+                t_intra = data_intraday[ticker].dropna()
+
+                if len(t_daily) < 11 or len(t_intra) < 5:
+                    continue
+
+                # --- 10-DAY VOLUME COMPARISON MATRIX ---
+                avg_10day_vol = float(t_daily['Volume'].iloc[-11:-1].mean())
+                current_day_vol = float(t_daily['Volume'].iloc[-1])
+                
+                # Check if today's overall volume has scaled past historical limits
+                if current_day_vol <= avg_10day_vol:
+                    continue
+
+                # --- LIVE INTRADAY 5m VOLUME ACCUMULATION TRIGGER ---
+                vols_5m = t_intra['Volume'].values.flatten()
+                
+                # Ensure volume is strictly increasing or piling up in the last 3 candles
+                if not (vols_5m[-1] >= vols_5m[-2] or vols_5m[-2] >= vols_5m[-3]):
+                    continue
+
+                vol_multiplier = current_day_vol / avg_10day_vol if avg_10day_vol > 0 else 1.0
+
+                # Technical Trend Sorter using 9 & 15 EMAs on 5-minute chart
+                t_intra['EMA_9'] = t_intra['Close'].ewm(span=9, adjust=False).mean()
+                t_intra['EMA_15'] = t_intra['Close'].ewm(span=15, adjust=False).mean()
+                
+                prices = t_intra['Close'].values.flatten()
+                latest_price = float(prices[-1])
+                ema9 = float(t_intra['EMA_9'].iloc[-1])
+                ema15 = float(t_intra['EMA_15'].iloc[-1])
+
+                prev_day_close = float(t_daily['Close'].iloc[-2])
+                p_change = ((latest_price - prev_day_close) / prev_day_close) * 100
+
+                stock_data = {
+                    "Stock Name": ticker.replace(".NS", ""),
+                    "Live Price": round(latest_price, 2),
+                    "Change %": round(p_change, 2),
+                    "Volume Multiplier": f"{round(vol_multiplier, 2)}x"
+                }
+
+                # Segregate into separate columns based on directional volume pressure
+                if latest_price > index_direction_ema := ema9 and ema9 >= ema15:
+                    up_gainers.append(stock_data)
+                elif latest_price < index_direction_ema and ema9 <= ema15:
+                    down_gainers.append(stock_data)
+
+            except Exception:
                 continue
+    except Exception:
+        pass
 
-        # --- 15-YEAR SEASONALITY ALIGNMENT ---
-        current_month = datetime.datetime.now().month
-        macro_historical_closes = nifty_macro[nifty_macro.index.month == current_month]['Close'].values.flatten()
-        historical_bullish_ratio = float(np.mean(np.diff(macro_historical_closes) > 0)) if len(macro_historical_closes) > 1 else 0.5
+    return up_gainers, down_gainers
 
-        # --- ALGORITHM SCORING MATRIX ---
-        score = 0
-        
-        if current_tick > ema_9: score += 1.5
-        if ema_9 > ema_21: score += 1
-        if current_tick > opening_tick: score += 2.5
-        
-        if historical_bullish_ratio > 0.52: score += 1
-        if fii_buying_pressure > 2: score += 3
-        if retail_panic_index > 2 and current_tick > opening_tick: score += 1.5
+# Run Scanner Loops
+with st.spinner("Analyzing Liquid 10-Day Arrays for Continuous Volume Surges..."):
+    up_list, down_list = scan_volume_gainers()
 
-        if current_tick < ema_9: score -= 1.5
-        if ema_9 < ema_21: score -= 1
-        if current_tick < opening_tick: score -= 2.5
-        if historical_bullish_ratio <= 0.52: score -= 1
-        if fii_buying_pressure < -2: score -= 3
-        if retail_panic_index > 2 and current_tick < opening_tick: score -= 1.5
+# Layout Arrangement
+col1, col2 = st.columns(2)
 
-        # --- FINAL DIRECTION SELECTION ROUTER ---
-        if score >= 5:
-            if live_atr_pct > 0.05:
-                bias, desc, color = "🚀 BULLISH TRENDING", "Technical breakout aligned with FII block buying. Pure upside trend grinding expected.", "#00FF00"
-            else:
-                bias, desc, color = "🥱 BULLISH SIDEWAYS", "Structure is positive but compressed. Expect slow upward drift inside a tight range.", "#99FF99"
-        elif score <= -5:
-            if live_atr_pct > 0.05:
-                bias, desc, color = "📉 BEARISH TRENDING", "Heavy Institutional distribution active. Continuous breakdown sequence; recovery attempts will fail.", "#FF3333"
-            else:
-                bias, desc, color = "⚠️ BEARISH SIDEWAYS", "Market structural breakdown is slow. Price grinding downwards inside a choppy range.", "#FF9999"
-        else:
-            if current_tick >= opening_tick:
-                bias, desc, color = "🥱 UPSIDE SIDEWAYS", "No clear FII commitment. Retailers trapped on both sides, price locked inside premium flat zone.", "#FFFF99"
-            else:
-                bias, desc, color = "🥱 DOWNSIDE SIDEWAYS", "Compression Index is high. Market moving sideways with a minor negative exhaustion layout.", "#E2E8F0"
+with col1:
+    st.subheader("🟢 VOLUME GAINERS (UP SIDE MOVES)")
+    if up_list:
+        st.dataframe(pd.DataFrame(up_list).sort_values(by="Change %", ascending=False), use_container_width=True)
+    else:
+        st.info("Monitoring 200+ grid for institutional up-side buying volume...")
 
-        return bias, desc, color, round(score, 1), fii_buying_pressure, retail_panic_index
+with col2:
+    st.subheader("🔴 VOLUME GAINERS (DOWN SIDE MOVES)")
+    if down_list:
+        st.dataframe(pd.DataFrame(down_list).sort_values(by="Change %", ascending=True), use_container_width=True)
+    else:
+        st.info("Monitoring 200+ grid for heavy shorting distribution volume...")
 
-    except Exception as e:
-        return "⏳ CORE RE-CALIBRATING", f"Re-mapping live math feeds: {str(e)}", "#ffffff", 0, 0, 0
-
-# Time Tracking Sequence
-now_time = datetime.datetime.now()
-current_clock = now_time.strftime("%H:%M")
-
-st.markdown("---")
-
-# Caching engine to ensure strict 9:30 AM single daily lock
-if "locked_nifty_bias" not in st.session_state:
-    st.session_state.locked_nifty_bias = None
-    st.session_state.locked_nifty_desc = None
-    st.session_state.locked_nifty_color = None
-    st.session_state.locked_score = 0
-    st.session_state.locked_fii = 0
-    st.session_state.locked_retail = 0
-
-if current_clock >= "09:30":
-    if st.session_state.locked_nifty_bias is None:
-        with st.spinner("Locking Mathematical Psychology Model Matrix..."):
-            bias, desc, color, scr, fii, rtl = execute_ultimate_nifty_analysis()
-            st.session_state.locked_nifty_bias = bias
-            st.session_state.locked_nifty_desc = desc
-            st.session_state.locked_nifty_color = color
-            st.session_state.locked_score = scr
-            st.session_state.locked_fii = fii
-            st.session_state.locked_retail = rtl
-            
-    bias = st.session_state.locked_nifty_bias
-    desc = st.session_state.locked_nifty_desc
-    color = st.session_state.locked_nifty_color
-    scr = st.session_state.locked_score
-    fii = st.session_state.locked_fii
-    rtl = st.session_state.locked_retail
-    badge_text = "🔒 FINAL INTRADAY MATRIX LOCKED FOR THE DAY (09:30 AM)"
-else:
-    bias, desc, color, scr, fii, rtl = execute_ultimate_nifty_analysis()
-    badge_text = f"⏱️ ALGO PROCESSING FEED (Locking at 09:30 AM) | Live Scan: {current_clock}"
-
-# Unified Clean Inline HTML Formatting (Fixes text block render error)
-fii_color = '#10b981' if fii >= 0 else '#ef4444'
-card_html = f'<div class="main-matrix-card"><div class="status-badge">{badge_text}</div><div style="color: #4b5563; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Calculated Multi-Factor Target</div><div class="prediction-view" style="color: {color};">{bias}</div><div class="description-view">{desc}</div><div class="metrics-container"><div class="metric-box"><div class="metric-val" style="color: #3b82f6;">{scr}</div><div class="metric-lbl">Model Score</div></div><div class="metric-box"><div class="metric-val" style="color: {fii_color};">{fii}</div><div class="metric-lbl">Inst. Flow</div></div><div class="metric-box"><div class="metric-val" style="color: #f59e0b;">{rtl} Blocks</div><div class="metric-lbl">Retail Trap Risk</div></div></div></div>'
-
-st.markdown(card_html, unsafe_allow_html=True)
-
-# 3-Minute Precise Loop Update
+# 3-Minute Refresh sequence loop
 time.sleep(180)
 st.rerun()
