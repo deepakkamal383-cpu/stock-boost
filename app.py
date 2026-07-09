@@ -6,7 +6,7 @@ import time
 
 # Ultra-wide Layout Page Configuration
 st.set_page_config(page_title="Volume Gainer Scanner", layout="wide")
-st.title("📊 institutional Volume Flow Scanner (200+ F&O Matrix)")
+st.title("📊 Institutional Volume Flow Scanner (200+ F&O Matrix)")
 st.write("Live 5-Minute Volume Surge Tracker • High Real-Time Accumulation vs 10-Day Baseline")
 
 # COMPLETE 200+ F&O WATCHLIST
@@ -102,10 +102,10 @@ def scan_volume_gainers():
                     "Volume Multiplier": f"{round(vol_multiplier, 2)}x"
                 }
 
-                # Segregate into separate columns based on directional volume pressure
-                if latest_price > index_direction_ema := ema9 and ema9 >= ema15:
+                # Corrected syntax condition allocation
+                if latest_price > ema9 and ema9 >= ema15:
                     up_gainers.append(stock_data)
-                elif latest_price < index_direction_ema and ema9 <= ema15:
+                elif latest_price < ema9 and ema9 <= ema15:
                     down_gainers.append(stock_data)
 
             except Exception:
